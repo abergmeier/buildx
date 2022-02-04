@@ -14,22 +14,22 @@ import (
 	"golang.org/x/sync/errgroup"
 )
 
-type rmOptions struct {
-	builder     string
-	keepState   bool
-	keepDaemon  bool
-	allInactive bool
-	force       bool
+type RmOptions struct {
+	Builder     string
+	KeepState   bool
+	KeepDaemon  bool
+	AllInactive bool
+	Force       bool
 }
 
 const (
 	rmInactiveWarning = `WARNING! This will remove all builders that are not in running state. Are you sure you want to continue?`
 )
 
-func runRm(dockerCli command.Cli, in rmOptions) error {
+func runRm(dockerCli command.Cli, in RmOptions) error {
 	ctx := appcontext.Context()
 
-	if in.allInactive && !in.force && !command.PromptForConfirmation(dockerCli.In(), dockerCli.Out(), rmInactiveWarning) {
+	if in.AllInactive && !in.Force && !command.PromptForConfirmation(dockerCli.In(), dockerCli.Out(), rmInactiveWarning) {
 		return nil
 	}
 
@@ -39,16 +39,16 @@ func runRm(dockerCli command.Cli, in rmOptions) error {
 	}
 	defer release()
 
-	if in.allInactive {
+	if in.AllInactive {
 		return rmAllInactive(ctx, txn, dockerCli, in)
 	}
 
-	if in.builder != "" {
-		ng, err := storeutil.GetNodeGroup(txn, dockerCli, in.builder)
+	if in.Builder != "" {
+		ng, err := storeutil.GetNodeGroup(txn, dockerCli, in.Builder)
 		if err != nil {
 			return err
 		}
-		err1 := rm(ctx, dockerCli, in, ng)
+		err1 := Rm(ctx, dockerCli, in, ng)
 		if err := txn.Remove(ng.Name); err != nil {
 			return err
 		}
@@ -60,7 +60,7 @@ func runRm(dockerCli command.Cli, in rmOptions) error {
 		return err
 	}
 	if ng != nil {
-		err1 := rm(ctx, dockerCli, in, ng)
+		err1 := Rm(ctx, dockerCli, in, ng)
 		if err := txn.Remove(ng.Name); err != nil {
 			return err
 		}
@@ -71,34 +71,34 @@ func runRm(dockerCli command.Cli, in rmOptions) error {
 }
 
 func rmCmd(dockerCli command.Cli, rootOpts *rootOptions) *cobra.Command {
-	var options rmOptions
+	var options RmOptions
 
 	cmd := &cobra.Command{
 		Use:   "rm [NAME]",
 		Short: "Remove a builder instance",
 		Args:  cli.RequiresMaxArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
-			options.builder = rootOpts.builder
+			options.Builder = rootOpts.builder
 			if len(args) > 0 {
-				if options.allInactive {
+				if options.AllInactive {
 					return errors.New("cannot specify builder name when --all-inactive is set")
 				}
-				options.builder = args[0]
+				options.Builder = args[0]
 			}
 			return runRm(dockerCli, options)
 		},
 	}
 
 	flags := cmd.Flags()
-	flags.BoolVar(&options.keepState, "keep-state", false, "Keep BuildKit state")
-	flags.BoolVar(&options.keepDaemon, "keep-daemon", false, "Keep the buildkitd daemon running")
-	flags.BoolVar(&options.allInactive, "all-inactive", false, "Remove all inactive builders")
-	flags.BoolVarP(&options.force, "force", "f", false, "Do not prompt for confirmation")
+	flags.BoolVar(&options.KeepState, "keep-state", false, "Keep BuildKit state")
+	flags.BoolVar(&options.KeepDaemon, "keep-daemon", false, "Keep the buildkitd daemon running")
+	flags.BoolVar(&options.AllInactive, "all-inactive", false, "Remove all inactive builders")
+	flags.BoolVarP(&options.Force, "force", "f", false, "Do not prompt for confirmation")
 
 	return cmd
 }
 
-func rm(ctx context.Context, dockerCli command.Cli, in rmOptions, ng *store.NodeGroup) error {
+func Rm(ctx context.Context, dockerCli command.Cli, in RmOptions, ng *store.NodeGroup) error {
 	dis, err := driversForNodeGroup(ctx, dockerCli, ng, "")
 	if err != nil {
 		return err
@@ -108,12 +108,12 @@ func rm(ctx context.Context, dockerCli command.Cli, in rmOptions, ng *store.Node
 			continue
 		}
 		// Do not stop the buildkitd daemon when --keep-daemon is provided
-		if !in.keepDaemon {
+		if !in.KeepDaemon {
 			if err := di.Driver.Stop(ctx, true); err != nil {
 				return err
 			}
 		}
-		if err := di.Driver.Rm(ctx, true, !in.keepState, !in.keepDaemon); err != nil {
+		if err := di.Driver.Rm(ctx, true, !in.KeepState, !in.KeepDaemon); err != nil {
 			return err
 		}
 		if di.Err != nil {
@@ -123,7 +123,7 @@ func rm(ctx context.Context, dockerCli command.Cli, in rmOptions, ng *store.Node
 	return err
 }
 
-func rmAllInactive(ctx context.Context, txn *store.Txn, dockerCli command.Cli, in rmOptions) error {
+func rmAllInactive(ctx context.Context, txn *store.Txn, dockerCli command.Cli, in RmOptions) error {
 	ctx, cancel := context.WithTimeout(ctx, 20*time.Second)
 	defer cancel()
 
@@ -132,24 +132,24 @@ func rmAllInactive(ctx context.Context, txn *store.Txn, dockerCli command.Cli, i
 		return err
 	}
 
-	builders := make([]*nginfo, len(ll))
+	builders := make([]*Nginfo, len(ll))
 	for i, ng := range ll {
-		builders[i] = &nginfo{ng: ng}
+		builders[i] = &Nginfo{Ng: ng}
 	}
 
 	eg, _ := errgroup.WithContext(ctx)
 	for _, b := range builders {
-		func(b *nginfo) {
+		func(b *Nginfo) {
 			eg.Go(func() error {
-				if err := loadNodeGroupData(ctx, dockerCli, b); err != nil {
-					return errors.Wrapf(err, "cannot load %s", b.ng.Name)
+				if err := LoadNodeGroupData(ctx, dockerCli, b); err != nil {
+					return errors.Wrapf(err, "cannot load %s", b.Ng.Name)
 				}
-				if b.ng.Dynamic {
+				if b.Ng.Dynamic {
 					return nil
 				}
 				if b.inactive() {
-					rmerr := rm(ctx, dockerCli, in, b.ng)
-					if err := txn.Remove(b.ng.Name); err != nil {
+					rmerr := Rm(ctx, dockerCli, in, b.Ng)
+					if err := txn.Remove(b.Ng.Name); err != nil {
 						return err
 					}
 					return rmerr

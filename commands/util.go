@@ -25,8 +25,8 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-// validateEndpoint validates that endpoint is either a context or a docker host
-func validateEndpoint(dockerCli command.Cli, ep string) (string, error) {
+// ValidateEndpoint validates that endpoint is either a context or a docker host
+func ValidateEndpoint(dockerCli command.Cli, ep string) (string, error) {
 	de, err := storeutil.GetDockerEndpoint(dockerCli, ep)
 	if err == nil && de != "" {
 		if ep == "default" {
@@ -195,7 +195,7 @@ func clientForEndpoint(dockerCli command.Cli, name string) (dockerclient.APIClie
 	return dockerclient.NewClientWithOpts(clientOpts...)
 }
 
-func getInstanceOrDefault(ctx context.Context, dockerCli command.Cli, instance, contextPathHash string) ([]build.DriverInfo, error) {
+func GetInstanceOrDefault(ctx context.Context, dockerCli command.Cli, instance, contextPathHash string) ([]build.DriverInfo, error) {
 	var defaultOnly bool
 
 	if instance == "default" && instance != dockerCli.CurrentContext() {
@@ -299,10 +299,10 @@ func loadInfoData(ctx context.Context, d *dinfo) error {
 	return nil
 }
 
-func loadNodeGroupData(ctx context.Context, dockerCli command.Cli, ngi *nginfo) error {
+func LoadNodeGroupData(ctx context.Context, dockerCli command.Cli, ngi *Nginfo) error {
 	eg, _ := errgroup.WithContext(ctx)
 
-	dis, err := driversForNodeGroup(ctx, dockerCli, ngi.ng, "")
+	dis, err := driversForNodeGroup(ctx, dockerCli, ngi.Ng, "")
 	if err != nil {
 		return err
 	}
@@ -355,9 +355,9 @@ func loadNodeGroupData(ctx context.Context, dockerCli command.Cli, ngi *nginfo) 
 		}
 
 		// not append (remove the static nodes in the store)
-		ngi.ng.Nodes = dynamicNodes
+		ngi.Ng.Nodes = dynamicNodes
 		ngi.drivers = drivers
-		ngi.ng.Dynamic = true
+		ngi.Ng.Dynamic = true
 	}
 
 	return nil
@@ -385,15 +385,15 @@ type dinfo struct {
 	err       error
 }
 
-type nginfo struct {
-	ng      *store.NodeGroup
+type Nginfo struct {
+	Ng      *store.NodeGroup
 	drivers []dinfo
-	err     error
+	Err     error
 }
 
 // inactive checks if all nodes are inactive for this builder
-func (n *nginfo) inactive() bool {
-	for idx := range n.ng.Nodes {
+func (n *Nginfo) inactive() bool {
+	for idx := range n.Ng.Nodes {
 		d := n.drivers[idx]
 		if d.info != nil && d.info.Status == driver.Running {
 			return false
@@ -402,7 +402,7 @@ func (n *nginfo) inactive() bool {
 	return true
 }
 
-func boot(ctx context.Context, ngi *nginfo) (bool, error) {
+func Boot(ctx context.Context, ngi *Nginfo) (bool, error) {
 	toBoot := make([]int, 0, len(ngi.drivers))
 	for i, d := range ngi.drivers {
 		if d.err != nil || d.di.Err != nil || d.di.Driver == nil || d.info == nil {
@@ -423,7 +423,7 @@ func boot(ctx context.Context, ngi *nginfo) (bool, error) {
 	for _, idx := range toBoot {
 		func(idx int) {
 			eg.Go(func() error {
-				pw := progress.WithPrefix(printer, ngi.ng.Nodes[idx].Name, len(toBoot) > 1)
+				pw := progress.WithPrefix(printer, ngi.Ng.Nodes[idx].Name, len(toBoot) > 1)
 				_, err := driver.Boot(ctx, baseCtx, ngi.drivers[idx].di.Driver, pw)
 				if err != nil {
 					ngi.drivers[idx].err = err

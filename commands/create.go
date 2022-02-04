@@ -135,7 +135,7 @@ func runCreate(dockerCli command.Cli, in createOptions, args []string) error {
 		}
 	} else {
 		if len(args) > 0 {
-			ep, err = validateEndpoint(dockerCli, args[0])
+			ep, err = ValidateEndpoint(dockerCli, args[0])
 			if err != nil {
 				return err
 			}
@@ -185,17 +185,17 @@ func runCreate(dockerCli command.Cli, in createOptions, args []string) error {
 		}
 	}
 
-	ngi := &nginfo{ng: ng}
+	ngi := &Nginfo{Ng: ng}
 
 	timeoutCtx, cancel := context.WithTimeout(ctx, 20*time.Second)
 	defer cancel()
 
-	if err = loadNodeGroupData(timeoutCtx, dockerCli, ngi); err != nil {
+	if err = LoadNodeGroupData(timeoutCtx, dockerCli, ngi); err != nil {
 		return err
 	}
 
 	if in.bootstrap {
-		if _, err = boot(ctx, ngi); err != nil {
+		if _, err = Boot(ctx, ngi); err != nil {
 			return err
 		}
 	}

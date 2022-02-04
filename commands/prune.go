@@ -54,7 +54,7 @@ func runPrune(dockerCli command.Cli, opts pruneOptions) error {
 		return nil
 	}
 
-	dis, err := getInstanceOrDefault(ctx, dockerCli, opts.builder, "")
+	dis, err := GetInstanceOrDefault(ctx, dockerCli, opts.builder, "")
 	if err != nil {
 		return err
 	}
