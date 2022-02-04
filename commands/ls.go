@@ -40,18 +40,18 @@ func runLs(dockerCli command.Cli, in lsOptions) error {
 		return err
 	}
 
-	builders := make([]*nginfo, len(ll))
+	builders := make([]*Nginfo, len(ll))
 	for i, ng := range ll {
-		builders[i] = &nginfo{ng: ng}
+		builders[i] = &Nginfo{Ng: ng}
 	}
 
 	list, err := dockerCli.ContextStore().List()
 	if err != nil {
 		return err
 	}
-	ctxbuilders := make([]*nginfo, len(list))
+	ctxbuilders := make([]*Nginfo, len(list))
 	for i, l := range list {
-		ctxbuilders[i] = &nginfo{ng: &store.NodeGroup{
+		ctxbuilders[i] = &Nginfo{Ng: &store.NodeGroup{
 			Name: l.Name,
 			Nodes: []store.Node{{
 				Name:     l.Name,
@@ -65,11 +65,11 @@ func runLs(dockerCli command.Cli, in lsOptions) error {
 	eg, _ := errgroup.WithContext(ctx)
 
 	for _, b := range builders {
-		func(b *nginfo) {
+		func(b *Nginfo) {
 			eg.Go(func() error {
-				err = loadNodeGroupData(ctx, dockerCli, b)
-				if b.err == nil && err != nil {
-					b.err = err
+				err = LoadNodeGroupData(ctx, dockerCli, b)
+				if b.Err == nil && err != nil {
+					b.Err = err
 				}
 				return nil
 			})
@@ -97,8 +97,8 @@ func runLs(dockerCli command.Cli, in lsOptions) error {
 
 	currentSet := false
 	for _, b := range builders {
-		if !currentSet && b.ng.Name == currentName {
-			b.ng.Name += " *"
+		if !currentSet && b.Ng.Name == currentName {
+			b.Ng.Name += " *"
 			currentSet = true
 		}
 		printngi(w, b)
@@ -109,14 +109,14 @@ func runLs(dockerCli command.Cli, in lsOptions) error {
 	return nil
 }
 
-func printngi(w io.Writer, ngi *nginfo) {
+func printngi(w io.Writer, ngi *Nginfo) {
 	var err string
-	if ngi.err != nil {
-		err = ngi.err.Error()
+	if ngi.Err != nil {
+		err = ngi.Err.Error()
 	}
-	fmt.Fprintf(w, "%s\t%s\t%s\t\n", ngi.ng.Name, ngi.ng.Driver, err)
-	if ngi.err == nil {
-		for idx, n := range ngi.ng.Nodes {
+	fmt.Fprintf(w, "%s\t%s\t%s\t\n", ngi.Ng.Name, ngi.Ng.Driver, err)
+	if ngi.Err == nil {
+		for idx, n := range ngi.Ng.Nodes {
 			d := ngi.drivers[idx]
 			var err string
 			if d.err != nil {

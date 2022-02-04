@@ -215,7 +215,7 @@ func runBuild(dockerCli command.Cli, in buildOptions) (err error) {
 }
 
 func buildTargets(ctx context.Context, dockerCli command.Cli, opts map[string]build.Options, progressMode, contextPathHash, instance string, metadataFile string) (imageID string, err error) {
-	dis, err := getInstanceOrDefault(ctx, dockerCli, instance, contextPathHash)
+	dis, err := GetInstanceOrDefault(ctx, dockerCli, instance, contextPathHash)
 	if err != nil {
 		return "", err
 	}

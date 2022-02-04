@@ -30,7 +30,7 @@ func runRm(dockerCli command.Cli, in rmOptions) error {
 		if err != nil {
 			return err
 		}
-		err1 := rm(ctx, dockerCli, ng, in.keepState)
+		err1 := Rm(ctx, dockerCli, ng, in.keepState)
 		if err := txn.Remove(ng.Name); err != nil {
 			return err
 		}
@@ -42,7 +42,7 @@ func runRm(dockerCli command.Cli, in rmOptions) error {
 		return err
 	}
 	if ng != nil {
-		err1 := rm(ctx, dockerCli, ng, in.keepState)
+		err1 := Rm(ctx, dockerCli, ng, in.keepState)
 		if err := txn.Remove(ng.Name); err != nil {
 			return err
 		}
@@ -74,7 +74,7 @@ func rmCmd(dockerCli command.Cli, rootOpts *rootOptions) *cobra.Command {
 	return cmd
 }
 
-func rm(ctx context.Context, dockerCli command.Cli, ng *store.NodeGroup, keepState bool) error {
+func Rm(ctx context.Context, dockerCli command.Cli, ng *store.NodeGroup, keepState bool) error {
 	dis, err := driversForNodeGroup(ctx, dockerCli, ng, "")
 	if err != nil {
 		return err

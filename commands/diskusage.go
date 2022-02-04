@@ -31,7 +31,7 @@ func runDiskUsage(dockerCli command.Cli, opts duOptions) error {
 		return err
 	}
 
-	dis, err := getInstanceOrDefault(ctx, dockerCli, opts.builder, "")
+	dis, err := GetInstanceOrDefault(ctx, dockerCli, opts.builder, "")
 	if err != nil {
 		return err
 	}

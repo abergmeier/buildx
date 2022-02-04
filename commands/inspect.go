@@ -55,40 +55,40 @@ func runInspect(dockerCli command.Cli, in inspectOptions) error {
 		}
 	}
 
-	ngi := &nginfo{ng: ng}
+	ngi := &Nginfo{Ng: ng}
 
 	timeoutCtx, cancel := context.WithTimeout(ctx, 20*time.Second)
 	defer cancel()
 
-	err = loadNodeGroupData(timeoutCtx, dockerCli, ngi)
+	err = LoadNodeGroupData(timeoutCtx, dockerCli, ngi)
 
-	var bootNgi *nginfo
+	var bootNgi *Nginfo
 	if in.bootstrap {
 		var ok bool
-		ok, err = boot(ctx, ngi)
+		ok, err = Boot(ctx, ngi)
 		if err != nil {
 			return err
 		}
 		bootNgi = ngi
 		if ok {
-			ngi = &nginfo{ng: ng}
-			err = loadNodeGroupData(ctx, dockerCli, ngi)
+			ngi = &Nginfo{Ng: ng}
+			err = LoadNodeGroupData(ctx, dockerCli, ngi)
 		}
 	}
 
 	w := tabwriter.NewWriter(os.Stdout, 0, 0, 1, ' ', 0)
-	fmt.Fprintf(w, "Name:\t%s\n", ngi.ng.Name)
-	fmt.Fprintf(w, "Driver:\t%s\n", ngi.ng.Driver)
+	fmt.Fprintf(w, "Name:\t%s\n", ngi.Ng.Name)
+	fmt.Fprintf(w, "Driver:\t%s\n", ngi.Ng.Driver)
 	if err != nil {
 		fmt.Fprintf(w, "Error:\t%s\n", err.Error())
-	} else if ngi.err != nil {
-		fmt.Fprintf(w, "Error:\t%s\n", ngi.err.Error())
+	} else if ngi.Err != nil {
+		fmt.Fprintf(w, "Error:\t%s\n", ngi.Err.Error())
 	}
 	if err == nil {
 		fmt.Fprintln(w, "")
 		fmt.Fprintln(w, "Nodes:")
 
-		for i, n := range ngi.ng.Nodes {
+		for i, n := range ngi.Ng.Nodes {
 			if i != 0 {
 				fmt.Fprintln(w, "")
 			}

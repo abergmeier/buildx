@@ -87,7 +87,7 @@ func runBake(dockerCli command.Cli, targets []string, in bakeOptions) (err error
 		}
 	}()
 
-	dis, err := getInstanceOrDefault(ctx, dockerCli, in.builder, contextPathHash)
+	dis, err := GetInstanceOrDefault(ctx, dockerCli, in.builder, contextPathHash)
 	if err != nil {
 		return err
 	}
