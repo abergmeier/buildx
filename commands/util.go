@@ -392,6 +392,18 @@ type Nginfo struct {
 }
 
 func Boot(ctx context.Context, ngi *Nginfo) (bool, error) {
+	printer := progress.NewPrinter(context.TODO(), os.Stderr, "auto")
+	v, err := BootWithWriter(ctx, ngi, func(prefix string, force bool) progress.Writer {
+		return progress.WithPrefix(printer, prefix, force)
+	})
+	err1 := printer.Wait()
+	if err == nil {
+		err = err1
+	}
+	return v, err
+}
+
+func BootWithWriter(ctx context.Context, ngi *Nginfo, progressWriter func(prefix string, force bool) progress.Writer) (bool, error) {
 	toBoot := make([]int, 0, len(ngi.drivers))
 	for i, d := range ngi.drivers {
 		if d.err != nil || d.di.Err != nil || d.di.Driver == nil || d.info == nil {
@@ -405,14 +417,12 @@ func Boot(ctx context.Context, ngi *Nginfo) (bool, error) {
 		return false, nil
 	}
 
-	printer := progress.NewPrinter(context.TODO(), os.Stderr, "auto")
-
 	baseCtx := ctx
 	eg, _ := errgroup.WithContext(ctx)
 	for _, idx := range toBoot {
 		func(idx int) {
 			eg.Go(func() error {
-				pw := progress.WithPrefix(printer, ngi.Ng.Nodes[idx].Name, len(toBoot) > 1)
+				pw := progressWriter(ngi.Ng.Nodes[idx].Name, len(toBoot) > 1)
 				_, err := driver.Boot(ctx, baseCtx, ngi.drivers[idx].di.Driver, pw)
 				if err != nil {
 					ngi.drivers[idx].err = err
@@ -422,11 +432,5 @@ func Boot(ctx context.Context, ngi *Nginfo) (bool, error) {
 		}(idx)
 	}
 
-	err := eg.Wait()
-	err1 := printer.Wait()
-	if err == nil {
-		err = err1
-	}
-
-	return true, err
+	return true, eg.Wait()
 }
