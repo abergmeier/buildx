@@ -11,6 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/containerd/console"
 	"github.com/docker/buildx/build"
 	"github.com/docker/buildx/util/buildflags"
 	"github.com/docker/buildx/util/confutil"
@@ -37,7 +38,7 @@ import (
 	"google.golang.org/grpc/codes"
 )
 
-const defaultTargetName = "default"
+const DefaultTargetName = "default"
 
 type buildOptions struct {
 	contextPath    string
@@ -225,7 +226,7 @@ func runBuild(dockerCli command.Cli, in buildOptions) (err error) {
 		contextPathHash = in.contextPath
 	}
 
-	imageID, err := buildTargets(ctx, dockerCli, map[string]build.Options{defaultTargetName: opts}, in.progress, contextPathHash, in.builder, in.metadataFile)
+	imageID, err := BuildTargets(ctx, dockerCli, map[string]build.Options{DefaultTargetName: opts}, in.progress, contextPathHash, in.builder, in.metadataFile, os.Stderr, os.Stderr)
 	err = wrapBuildError(err, false)
 	if err != nil {
 		return err
@@ -237,7 +238,7 @@ func runBuild(dockerCli command.Cli, in buildOptions) (err error) {
 	return nil
 }
 
-func buildTargets(ctx context.Context, dockerCli command.Cli, opts map[string]build.Options, progressMode, contextPathHash, instance string, metadataFile string) (imageID string, err error) {
+func BuildTargets(ctx context.Context, dockerCli command.Cli, opts map[string]build.Options, progressMode, contextPathHash, instance string, metadataFile string, w io.Writer, progressFile console.File) (imageID string, err error) {
 	dis, err := GetInstanceOrDefault(ctx, dockerCli, instance, contextPathHash)
 	if err != nil {
 		return "", err
@@ -246,7 +247,7 @@ func buildTargets(ctx context.Context, dockerCli command.Cli, opts map[string]bu
 	ctx2, cancel := context.WithCancel(context.TODO())
 	defer cancel()
 
-	printer := progress.NewPrinter(ctx2, os.Stderr, os.Stderr, progressMode)
+	printer := progress.NewPrinter(ctx2, w, progressFile, progressMode)
 
 	resp, err := build.Build(ctx, dis, opts, dockerAPI(dockerCli), confutil.ConfigDir(dockerCli), printer)
 	err1 := printer.Wait()
@@ -258,14 +259,14 @@ func buildTargets(ctx context.Context, dockerCli command.Cli, opts map[string]bu
 	}
 
 	if len(metadataFile) > 0 && resp != nil {
-		if err := writeMetadataFile(metadataFile, decodeExporterResponse(resp[defaultTargetName].ExporterResponse)); err != nil {
+		if err := writeMetadataFile(metadataFile, decodeExporterResponse(resp[DefaultTargetName].ExporterResponse)); err != nil {
 			return "", err
 		}
 	}
 
 	printWarnings(os.Stderr, printer.Warnings(), progressMode)
 
-	return resp[defaultTargetName].ExporterResponse["containerimage.digest"], err
+	return resp[DefaultTargetName].ExporterResponse["containerimage.digest"], err
 }
 
 func printWarnings(w io.Writer, warnings []client.VertexWarning, mode string) {

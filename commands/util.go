@@ -403,7 +403,7 @@ func (n *Nginfo) inactive() bool {
 }
 
 func Boot(ctx context.Context, ngi *Nginfo) (bool, error) {
-	printer := progress.NewPrinter(context.TODO(), os.Stderr, "auto")
+	printer := progress.NewPrinter(context.TODO(), os.Stderr, os.Stderr, "auto")
 	v, err := BootWithWriter(ctx, ngi, func(prefix string, force bool) progress.Writer {
 		return progress.WithPrefix(printer, prefix, force)
 	})
