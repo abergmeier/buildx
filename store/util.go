@@ -8,9 +8,32 @@ import (
 	"github.com/pkg/errors"
 )
 
+var (
+	InvalidateName error = invalidateName{}
+)
+
+type invalidateName struct {
+	error
+}
+
+func (err invalidateName) Error() string {
+	if err.error == nil {
+		return "Invalid NodeGroup name"
+	}
+	return err.error.Error()
+}
+
+func (invalidateName) Is(other error) bool {
+	return errors.As(other, &invalidateName{})
+}
+
+func (invalidateName) Unwrap() error {
+	return nil
+}
+
 func ValidateName(s string) (string, error) {
 	if !namePattern.MatchString(s) {
-		return "", errors.Errorf("invalid name %s, name needs to start with a letter and may not contain symbols, except ._-", s)
+		return "", invalidateName{errors.Errorf("invalid name %s, name needs to start with a letter and may not contain symbols, except ._-", s)}
 	}
 	return strings.ToLower(s), nil
 }
