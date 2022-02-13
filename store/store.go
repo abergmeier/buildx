@@ -54,6 +54,9 @@ func (t *Txn) List() ([]*NodeGroup, error) {
 	for _, fi := range fis {
 		ng, err := t.NodeGroupByName(fi.Name())
 		if err != nil {
+			if errors.Is(err, InvalidateName) {
+				continue
+			}
 			if os.IsNotExist(errors.Cause(err)) {
 				os.RemoveAll(filepath.Join(pp, fi.Name()))
 				continue
